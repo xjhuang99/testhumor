@@ -280,9 +280,13 @@ def api_score():
         "overall": overall,
         "band": label,
         "band_blurb": blurb,
-        "mean_relative_score": round(mean_relative_score, 2),
         "style": _style_summary(client, graded),
-        "breakdown": graded,
+        # Participant-facing responses intentionally do not expose the internal
+        # per-item ratings or aggregate used to calculate the result.
+        "breakdown": [
+            {key: value for key, value in item.items() if key != "relative_score"}
+            for item in graded
+        ],
         "mode": "live" if client else "demo",
     })
 
