@@ -19,11 +19,9 @@ let cursor = 0;
 let timerId = null;
 
 const SCORING_LINES = [
-  "Reading the room…",
-  "Timing the pauses…",
-  "Consulting the laugh track…",
-  "Weighing wit against delivery…",
-  "Checking who laughed first…",
+  "Reviewing your responses…",
+  "Looking for the unexpected…",
+  "Preparing your result…",
 ];
 
 function show(name) {
@@ -155,10 +153,7 @@ function renderResults(data) {
   $("result-blurb").textContent = data.band_blurb;
   $("result-style").textContent = data.style;
 
-  $("score-method").textContent =
-    `AI estimate: 100 + 20 × your average item rating (${data.mean_relative_score >= 0 ? "+" : ""}${data.mean_relative_score} on a −5 to +5 scale).`;
-
-  // per-answer breakdown
+  // Per-answer feedback intentionally omits internal rating values and formulas.
   const list = $("breakdown-list");
   list.innerHTML = "";
   data.breakdown.forEach((b) => {
@@ -170,8 +165,7 @@ function renderResults(data) {
       `<p class="breakdown__answer${empty ? " is-empty" : ""}">` +
       `${empty ? "(skipped)" : escapeHtml(b.answer)}</p>` +
       `<div class="breakdown__meta">` +
-      `<p class="breakdown__note">${escapeHtml(b.note || "")}</p>` +
-      `<span class="breakdown__score">${b.relative_score >= 0 ? "+" : ""}${b.relative_score}/5</span></div>`;
+      `<p class="breakdown__note">${escapeHtml(b.note || "")}</p></div>`;
     list.appendChild(item);
   });
 
@@ -183,13 +177,10 @@ function renderResults(data) {
     flag.hidden = true;
   }
 
-  animateMeter(data.overall);
+  animateScore(data.overall);
 }
 
-/* animate needle sweep + arc fill + score count-up */
-function animateMeter(score) {
-  const needle = $("needle");
-  const arc = $("result-arc");
+function animateScore(score) {
   const readout = $("result-score");
   const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
   const duration = reduce ? 0 : 1300;
@@ -199,9 +190,6 @@ function animateMeter(score) {
     const t = duration === 0 ? 1 : Math.min((now - start) / duration, 1);
     const eased = 1 - Math.pow(1 - t, 3); // easeOutCubic
     const v = score * eased;
-    const angle = -90 + (v / 200) * 180;
-    needle.setAttribute("transform", `rotate(${angle} 120 130)`);
-    arc.setAttribute("stroke-dasharray", `${v} 100`);
     readout.textContent = Math.round(v);
     if (t < 1) requestAnimationFrame(frame);
   }
