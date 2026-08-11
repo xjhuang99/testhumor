@@ -17,18 +17,23 @@ python app.py                 # opens on http://localhost:5000
 ```
 
 It runs immediately in **demo mode** with deterministic mock scores — no API key
-needed — so you can click all the way through. For real scoring, set your key (never commit it):
+needed — so you can click all the way through. For real scoring, choose a provider
+and set only its key (never commit it):
 
 ```bash
+export HIT_PROVIDER=deepseek  # deepseek | openai | anthropic | gemini
 export DEEPSEEK_API_KEY=sk-...
 python app.py
 ```
 
-Or copy `.env.example` to `.env` and add your key there (`.env` is gitignored).
+Or copy `.env.example` to `.env` and add the selected provider's key there
+(`.env` is gitignored). `HIT_MODEL` is optional; omit it to use the configured
+provider default. DeepSeek, OpenAI, and Gemini use OpenAI-compatible chat
+completions; Claude uses Anthropic's native Messages API.
 
 ## How scoring works
 
-Each non-blank response is sent to DeepSeek with a fixed rubric (`RATER_SYSTEM`
+Each non-blank response is sent to the selected provider with a fixed rubric (`RATER_SYSTEM`
 in `app.py`). The model returns one relative score from -5 to +5, an AI estimate
 of how funny the response is compared with a broad adult respondent pool.
 
@@ -49,8 +54,9 @@ A second call writes the "comedic style" paragraph. Temperature is held low
   at them.
 - **Bands & rubric.** `BANDS` and `RATER_SYSTEM` in `app.py` are the two knobs
   for calibration — see below.
-- **Model.** Defaults to DeepSeek `deepseek-chat`; set `HIT_MODEL` to change it
-  (e.g. `deepseek-reasoner`).
+- **Model.** Set `HIT_PROVIDER` to `deepseek`, `openai`, `anthropic`, or
+  `gemini`; set `HIT_MODEL` only when you want to override that provider's
+  default model.
 
 ## Cost and reliability safeguards
 
@@ -61,7 +67,7 @@ A second call writes the "comedic style" paragraph. Temperature is held low
   `HIT_RATE_LIMIT_MAX` to change it.
 - IP addresses are stored only as keyed hashes in `rate_limits.sqlite3`; set
   `HIT_IP_HASH_SECRET` to a long random production secret.
-- A DeepSeek request has a 30-second timeout by default. A provider error returns
+- A provider request has a 30-second timeout by default. A provider error returns
   a clear error rather than a mock score.
 - Anonymous telemetry records completion/failure, model-call count, token counts,
   and latency. It never stores answers or raw IP addresses.

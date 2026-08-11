@@ -24,6 +24,7 @@ import os
 import re
 import sqlite3
 import time
+from dataclasses import dataclass
 from pathlib import Path
 
 from flask import Flask, g, jsonify, render_template, request
@@ -53,10 +54,20 @@ def _load_dotenv():
 
 _load_dotenv()
 
+PROVIDER = os.environ.get("HIT_PROVIDER", "deepseek").strip().lower()
 DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.com")
-# deepseek-chat: general chat; deepseek-reasoner: slower, stronger reasoning
-MODEL = os.environ.get("HIT_MODEL", "deepseek-chat")
-API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+GEMINI_BASE_URL = os.environ.get(
+    "GEMINI_BASE_URL", "https://generativelanguage.googleapis.com/v1beta/openai/"
+)
+PROVIDER_DEFAULTS = {
+    "deepseek": ("DEEPSEEK_API_KEY", "deepseek-chat"),
+    "openai": ("OPENAI_API_KEY", "gpt-5-mini"),
+    "anthropic": ("ANTHROPIC_API_KEY", "claude-sonnet-4-20250514"),
+    "gemini": ("GEMINI_API_KEY", "gemini-3.6-flash"),
+}
+ACTIVE_KEY_NAME, DEFAULT_MODEL = PROVIDER_DEFAULTS.get(PROVIDER, (None, None))
+API_KEY = os.environ.get(ACTIVE_KEY_NAME) if ACTIVE_KEY_NAME else None
+MODEL = os.environ.get("HIT_MODEL", DEFAULT_MODEL or "")
 MAX_ANSWER_LENGTH = 280
 RATE_LIMIT_MAX = int(os.environ.get("HIT_RATE_LIMIT_MAX", "4"))
 RATE_LIMIT_WINDOW_SECONDS = 60 * 60
@@ -85,6 +96,12 @@ class ScoringUnavailable(Exception):
 
 class RateLimitStoreUnavailable(Exception):
     """The local persistent limiter could not be accessed."""
+
+
+@dataclass(frozen=True)
+class LLMClient:
+    provider: str
+    client: object
 
 
 def _hash_ip(client_ip: str) -> str:
@@ -246,14 +263,46 @@ def _mock_scores(item, answer):
 
 
 def _client():
+    if PROVIDER not in PROVIDER_DEFAULTS:
+        raise ValueError(f"Unsupported HIT_PROVIDER: {PROVIDER}")
+    if not API_KEY:
+        return None
+    if PROVIDER == "anthropic":
+        from anthropic import Anthropic
+
+        return LLMClient(
+            provider="anthropic",
+            client=Anthropic(api_key=API_KEY, timeout=LLM_TIMEOUT_SECONDS),
+        )
+
     from openai import OpenAI
 
-    return OpenAI(api_key=API_KEY, base_url=DEEPSEEK_BASE_URL)
+    kwargs = {"api_key": API_KEY, "timeout": LLM_TIMEOUT_SECONDS}
+    if PROVIDER == "deepseek":
+        kwargs["base_url"] = DEEPSEEK_BASE_URL
+    elif PROVIDER == "gemini":
+        kwargs["base_url"] = GEMINI_BASE_URL
+    return LLMClient(provider=PROVIDER, client=OpenAI(**kwargs))
 
 
 def _complete(client, system: str, user: str, *, max_tokens: int, temperature: float) -> str:
     g.score_model_calls = getattr(g, "score_model_calls", 0) + 1
-    reply = client.chat.completions.create(
+    if client.provider == "anthropic":
+        reply = client.client.messages.create(
+            model=MODEL,
+            max_tokens=max_tokens,
+            temperature=temperature,
+            system=system,
+            messages=[{"role": "user", "content": user}],
+        )
+        usage = reply.usage
+        g.score_prompt_tokens = getattr(g, "score_prompt_tokens", 0) + (usage.input_tokens or 0)
+        g.score_completion_tokens = getattr(g, "score_completion_tokens", 0) + (usage.output_tokens or 0)
+        return "".join(
+            block.text for block in reply.content if getattr(block, "type", None) == "text"
+        ).strip()
+
+    reply = client.client.chat.completions.create(
         model=MODEL,
         max_tokens=max_tokens,
         temperature=temperature,
@@ -403,7 +452,7 @@ def api_score():
         return response
 
     try:
-        client = _client() if API_KEY else None
+        client = _client()
     except Exception as exc:
         app.logger.exception("scoring client could not be created: %s", exc)
         _record_score_event("client_unavailable", ip_hash, started_at)
@@ -451,8 +500,8 @@ def api_score():
 def healthz():
     return jsonify({
         "ok": True,
-        "mode": "live" if API_KEY else "demo",
-        "provider": "deepseek",
+        "mode": "live" if API_KEY and PROVIDER in PROVIDER_DEFAULTS else "demo",
+        "provider": PROVIDER,
         "model": MODEL,
     })
 
