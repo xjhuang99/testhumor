@@ -28,7 +28,6 @@ button, input, textarea { font: inherit; }
 .brand { display: grid; color: var(--ink); text-decoration: none; line-height: 1; }
 .brand strong { font-size: 1.5rem; font-weight: 700; letter-spacing: -0.07em; }
 .brand strong span { font-weight: 400; }
-.brand small { margin-top: 4px; font-size: 0.84rem; font-weight: 400; letter-spacing: -0.035em; }
 .header-label { margin: 0; color: var(--muted); font-size: 0.88rem; font-weight: 600; }
 
 .stage {
@@ -66,6 +65,7 @@ button, input, textarea { font: inherit; }
 .progress__topline { display: flex; justify-content: space-between; align-items: center; margin-bottom: 9px; }
 .progress__label { color: var(--muted); font-size: .78rem; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; }
 .timer { color: var(--accent); font-size: .88rem; font-weight: 700; font-variant-numeric: tabular-nums; }
+.timer.is-expired { color: var(--muted); }
 .progress__track { height: 5px; overflow: hidden; border-radius: 99px; background: #dce5ee; }
 .progress__fill { height: 100%; border-radius: inherit; background: var(--accent); transition: width .35s ease; }
 
@@ -78,6 +78,7 @@ button, input, textarea { font: inherit; }
 .answer::placeholder { color: #9aa4b3; }
 .card__foot { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-top: 14px; }
 .counter { color: var(--muted); font-size: .78rem; }
+.timeout-message { margin: 14px 0 0; color: var(--muted); font-size: .83rem; line-height: 1.45; }
 .card__actions { display: flex; gap: 6px; }
 
 .screen--scoring { text-align: center; }
@@ -86,6 +87,7 @@ button, input, textarea { font: inherit; }
 .loading-mark i:nth-child(2) { animation-delay: .14s; }.loading-mark i:nth-child(3) { animation-delay: .28s; }
 @keyframes pulse { 0%,100% { opacity: .28; transform: scale(.8); } 50% { opacity: 1; transform: scale(1); } }
 .scoring-text { margin: 0; color: var(--muted); font-size: 1rem; }
+.scoring-actions { display: flex; justify-content: center; gap: 8px; margin-top: 20px; }
 
 .screen--results { text-align: center; }
 .result-card { max-width: 440px; margin: 0 auto 22px; padding: 30px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--surface); box-shadow: var(--shadow); }

@@ -10,7 +10,7 @@
     {"id":"slide_4","type":"slide","kicker":"Presentation slide","setup":"Write a short joke that could fit this slide.","image":"/static/img/slide-4.png","image_alt":"Slide titled ‘Reasons People Do Not Apologize’, listing legal fears, advice of a lawyer, fear of embarrassment, lack of confidence, and lack of training.","time_limit":60},
     {"id":"headline_1","type":"headline","kicker":"Headline","setup":"The Dow Jones fell 100 points today.","time_limit":30},
     {"id":"headline_2","type":"headline","kicker":"Headline","setup":"Obesity in America at an all time high.","time_limit":30},
-    {"id":"headline_5","type":"headline","kicker":"Headline","setup":"Scientists find chemical in the food you're eating that may be making you sick.","time_limit":30},
+    {"id":"headline_5","type":"headline","kicker":"Headline","setup":"Scientists find chemical in the food you are eating that may be making you sick.","time_limit":30},
     {"id":"prompt_1","type":"prompt","kicker":"Prompt","setup":"Things not to say as you go through passport control.","time_limit":30},
     {"id":"prompt_2","type":"prompt","kicker":"Prompt","setup":"Worst birthday presents for your boss.","time_limit":30},
     {"id":"prompt_3","type":"prompt","kicker":"Prompt","setup":"Things not to say in a wedding toast.","time_limit":30}

@@ -17,6 +17,7 @@ let items = [];
 let answers = {};       // id -> text
 let cursor = 0;
 let timerId = null;
+let isSubmitting = false;
 
 const SCORING_LINES = [
   "Reviewing your responses…",
@@ -29,6 +30,19 @@ function show(name) {
     el.hidden = key !== name;
   });
   window.scrollTo({ top: 0, behavior: "smooth" });
+}
+
+function restoreSavedResult() {
+  try {
+    const saved = sessionStorage.getItem("humor-test-result");
+    if (!saved) return;
+    const result = JSON.parse(saved);
+    if (typeof result.overall === "number" && result.band && Array.isArray(result.breakdown)) {
+      renderResults(result);
+    }
+  } catch {
+    sessionStorage.removeItem("humor-test-result");
+  }
 }
 
 /* ------------------------------- load ------------------------------- */
@@ -63,7 +77,11 @@ function renderPrompt() {
   }
 
   const input = $("answer-input");
+  input.disabled = false;
   input.value = answers[item.id] || "";
+  $("skip-btn").disabled = false;
+  $("timeout-message").hidden = true;
+  $("timer").classList.remove("is-expired");
   updateCounter();
   $("next-btn").textContent = cursor === items.length - 1 ? "See my score" : "Next";
   input.focus();
@@ -84,7 +102,7 @@ function startTimer(seconds) {
     if (remaining <= 0) {
       clearInterval(timerId);
       timerId = null;
-      advance(false);
+      advance(false, true);
     }
   }, 1000);
 }
@@ -95,7 +113,7 @@ function updateCounter() {
 }
 
 /* ------------------------------ advance ------------------------------ */
-function advance(skip = false) {
+function advance(skip = false, timedOut = false) {
   clearInterval(timerId);
   timerId = null;
   const item = items[cursor];
@@ -104,6 +122,13 @@ function advance(skip = false) {
   if (cursor < items.length - 1) {
     cursor += 1;
     renderPrompt();
+  } else if (timedOut) {
+    $("answer-input").disabled = true;
+    $("skip-btn").disabled = true;
+    $("next-btn").textContent = "See my score";
+    $("timer").textContent = "Time's up";
+    $("timer").classList.add("is-expired");
+    $("timeout-message").hidden = false;
   } else {
     submit();
   }
@@ -111,9 +136,12 @@ function advance(skip = false) {
 
 /* ------------------------------ submit ------------------------------ */
 async function submit() {
+  if (isSubmitting) return;
+  isSubmitting = true;
   clearInterval(timerId);
   timerId = null;
   show("scoring");
+  $("scoring-actions").hidden = true;
   let i = 0;
   $("scoring-text").textContent = SCORING_LINES[0];
   const rotator = setInterval(() => {
@@ -138,7 +166,9 @@ async function submit() {
   } catch (err) {
     clearInterval(rotator);
     console.error(err);
-    $("scoring-text").textContent = "Something went wrong. Please try again.";
+    $("scoring-text").textContent = err.message || "Something went wrong. Please try again.";
+    $("scoring-actions").hidden = false;
+    isSubmitting = false;
   }
 }
 
@@ -147,6 +177,11 @@ let lastResult = null;
 
 function renderResults(data) {
   lastResult = data;
+  try {
+    sessionStorage.setItem("humor-test-result", JSON.stringify(data));
+  } catch {
+    // The current result remains visible if session storage is unavailable.
+  }
   show("results");
 
   $("result-band").textContent = data.band;
@@ -208,6 +243,8 @@ function restart() {
   timerId = null;
   answers = {};
   cursor = 0;
+  isSubmitting = false;
+  sessionStorage.removeItem("humor-test-result");
   renderPrompt();
   show("test");
 }
@@ -231,6 +268,7 @@ async function copyResult() {
 
 /* ------------------------------ wiring ------------------------------ */
 $("start-btn").addEventListener("click", () => {
+  sessionStorage.removeItem("humor-test-result");
   show("test");
   cursor = 0;
   renderPrompt();
@@ -239,9 +277,12 @@ $("next-btn").addEventListener("click", () => advance(false));
 $("skip-btn").addEventListener("click", () => advance(true));
 $("retake-btn").addEventListener("click", restart);
 $("copy-btn").addEventListener("click", copyResult);
+$("retry-btn").addEventListener("click", submit);
+$("restart-from-error-btn").addEventListener("click", restart);
 $("answer-input").addEventListener("input", updateCounter);
 $("answer-input").addEventListener("keydown", (e) => {
   if ((e.metaKey || e.ctrlKey) && e.key === "Enter") advance(false);
 });
 
 loadPrompts();
+restoreSavedResult();

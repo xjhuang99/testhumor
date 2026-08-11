@@ -28,9 +28,9 @@ Or copy `.env.example` to `.env` and add your key there (`.env` is gitignored).
 
 ## How scoring works
 
-Each response is sent to DeepSeek with a fixed rubric (`RATER_SYSTEM` in
-`app.py`). The model returns one relative score from -5 to +5, an AI estimate of
-how funny the response is compared with a broad adult respondent pool.
+Each non-blank response is sent to DeepSeek with a fixed rubric (`RATER_SYSTEM`
+in `app.py`). The model returns one relative score from -5 to +5, an AI estimate
+of how funny the response is compared with a broad adult respondent pool.
 
 Per-response score = a relative integer from -5 to +5. The overall score is
 `100 + 20 × mean(relative scores)`, producing a 0–200 result. This makes 100
@@ -52,15 +52,28 @@ A second call writes the "comedic style" paragraph. Temperature is held low
 - **Model.** Defaults to DeepSeek `deepseek-chat`; set `HIT_MODEL` to change it
   (e.g. `deepseek-reasoner`).
 
-## Calibrating against your RA-coded data
+## Cost and reliability safeguards
 
-Because the historical results were human-coded, you can validate the automated
-scores directly: run a set of previously coded responses through `/api/score`
-and correlate the model's per-item scores with your RAs' codes. Then adjust the
-`RATER_SYSTEM` anchors and the `BANDS` cutoffs until the automated bands line up
-with the human norms. Holding temperature low keeps this reproducible. For a
-published instrument you may also want an inter-rater check (e.g. score each
-response 3× and average) — the hook for that is `_rate_one` in `app.py`.
+- The final timer never submits automatically; a participant must explicitly
+  request a result.
+- The API accepts exactly eight unique responses, each limited to 280 characters.
+- The default limit is four complete scoring attempts per IP per hour. Set
+  `HIT_RATE_LIMIT_MAX` to change it.
+- IP addresses are stored only as keyed hashes in `rate_limits.sqlite3`; set
+  `HIT_IP_HASH_SECRET` to a long random production secret.
+- A DeepSeek request has a 30-second timeout by default. A provider error returns
+  a clear error rather than a mock score.
+- Anonymous telemetry records completion/failure, model-call count, token counts,
+  and latency. It never stores answers or raw IP addresses.
+
+On the server, inspect daily aggregate telemetry with:
+
+```bash
+sqlite3 /home/admin/project/testhumor/rate_limits.sqlite3 \
+  "SELECT date(created_at, 'unixepoch') AS day, outcome, COUNT(*) AS tests, \
+  SUM(model_calls) AS calls, SUM(prompt_tokens + completion_tokens) AS tokens, \
+  ROUND(AVG(elapsed_ms)) AS avg_ms FROM score_events GROUP BY day, outcome;"
+```
 
 ## Deploying
 
@@ -69,11 +82,12 @@ WSGI server instead of the dev server, e.g.:
 
 ```bash
 pip install gunicorn
-gunicorn app:app --bind 0.0.0.0:8000
+gunicorn app:app --bind 127.0.0.1:8000
 ```
 
-If ACTR hosts the page and the API separately, set `API_BASE` at the top of
-`static/app.js` to the API origin. CORS is already enabled server-side.
+The production deployment serves the page and API from the same domain. Keep the
+Gunicorn listener private behind Nginx; the app does not enable cross-origin API
+access.
 
 ## Endpoints
 

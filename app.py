@@ -18,13 +18,17 @@ prototype is clickable immediately. Set DEEPSEEK_API_KEY to score for real.
 """
 
 import hashlib
+import hmac
 import json
 import os
 import re
+import sqlite3
+import time
 from pathlib import Path
 
-from flask import Flask, jsonify, render_template, request
-from flask_cors import CORS
+from flask import Flask, g, jsonify, render_template, request
+from werkzeug.exceptions import RequestEntityTooLarge
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # --------------------------------------------------------------------------- #
 # Configuration
@@ -53,6 +57,12 @@ DEEPSEEK_BASE_URL = os.environ.get("DEEPSEEK_BASE_URL", "https://api.deepseek.co
 # deepseek-chat: general chat; deepseek-reasoner: slower, stronger reasoning
 MODEL = os.environ.get("HIT_MODEL", "deepseek-chat")
 API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+MAX_ANSWER_LENGTH = 280
+RATE_LIMIT_MAX = int(os.environ.get("HIT_RATE_LIMIT_MAX", "4"))
+RATE_LIMIT_WINDOW_SECONDS = 60 * 60
+RATE_LIMIT_DB = Path(os.environ.get("HIT_RATE_LIMIT_DB", BASE_DIR / "rate_limits.sqlite3"))
+IP_HASH_SECRET = os.environ.get("HIT_IP_HASH_SECRET", API_KEY or "development-only-secret")
+LLM_TIMEOUT_SECONDS = float(os.environ.get("HIT_LLM_TIMEOUT_SECONDS", "30"))
 
 # Descriptive bands for the 0–200 AI-estimated scale; no RA norm data are available.
 BANDS = [
@@ -64,7 +74,102 @@ BANDS = [
 ]
 
 app = Flask(__name__)
-CORS(app)  # lets the page be hosted separately from the API if needed
+app.config["MAX_CONTENT_LENGTH"] = 16 * 1024
+# Nginx is the only public entry point and already supplies X-Forwarded-For.
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1)
+
+
+class ScoringUnavailable(Exception):
+    """The configured live scorer could not produce a reliable result."""
+
+
+class RateLimitStoreUnavailable(Exception):
+    """The local persistent limiter could not be accessed."""
+
+
+def _hash_ip(client_ip: str) -> str:
+    """Persist a keyed, non-reversible IP identifier rather than a raw address."""
+    return hmac.new(
+        IP_HASH_SECRET.encode("utf-8"), client_ip.encode("utf-8"), hashlib.sha256
+    ).hexdigest()
+
+
+def _prepare_metrics(db):
+    # The first rate-limit version stored a raw `ip` column. Remove that short-
+    # lived table on upgrade so no raw IP addresses remain and the new schema can
+    # take effect cleanly.
+    columns = {row[1] for row in db.execute("PRAGMA table_info(score_attempts)")}
+    if columns and "ip_hash" not in columns:
+        db.execute("DROP TABLE score_attempts")
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS score_attempts "
+        "(ip_hash TEXT NOT NULL, created_at REAL NOT NULL)"
+    )
+    db.execute(
+        "CREATE INDEX IF NOT EXISTS score_attempts_ip_created "
+        "ON score_attempts (ip_hash, created_at)"
+    )
+    db.execute(
+        "CREATE TABLE IF NOT EXISTS score_events "
+        "(created_at REAL NOT NULL, ip_hash TEXT NOT NULL, outcome TEXT NOT NULL, "
+        "model_calls INTEGER NOT NULL, prompt_tokens INTEGER NOT NULL, "
+        "completion_tokens INTEGER NOT NULL, elapsed_ms INTEGER NOT NULL)"
+    )
+
+
+def _record_score_event(outcome: str, ip_hash: str, started_at: float):
+    """Record anonymous cost and reliability telemetry without storing answers."""
+    elapsed_ms = round((time.monotonic() - started_at) * 1000)
+    try:
+        with sqlite3.connect(RATE_LIMIT_DB, timeout=5) as db:
+            _prepare_metrics(db)
+            db.execute(
+                "INSERT INTO score_events "
+                "(created_at, ip_hash, outcome, model_calls, prompt_tokens, "
+                "completion_tokens, elapsed_ms) VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (
+                    time.time(),
+                    ip_hash,
+                    outcome,
+                    getattr(g, "score_model_calls", 0),
+                    getattr(g, "score_prompt_tokens", 0),
+                    getattr(g, "score_completion_tokens", 0),
+                    elapsed_ms,
+                ),
+            )
+    except sqlite3.Error:
+        app.logger.exception("score telemetry could not be recorded")
+
+
+def _consume_score_attempt(ip_hash: str):
+    """Atomically count one completed-test scoring attempt for an IP address."""
+    now = time.time()
+    cutoff = now - RATE_LIMIT_WINDOW_SECONDS
+    try:
+        with sqlite3.connect(RATE_LIMIT_DB, timeout=5) as db:
+            _prepare_metrics(db)
+            db.execute("BEGIN IMMEDIATE")
+            db.execute("DELETE FROM score_attempts WHERE created_at < ?", (cutoff,))
+            count = db.execute(
+                "SELECT COUNT(*) FROM score_attempts WHERE ip_hash = ? AND created_at >= ?",
+                (ip_hash, cutoff),
+            ).fetchone()[0]
+            if count >= RATE_LIMIT_MAX:
+                oldest = db.execute(
+                    "SELECT MIN(created_at) FROM score_attempts "
+                    "WHERE ip_hash = ? AND created_at >= ?",
+                    (ip_hash, cutoff),
+                ).fetchone()[0]
+                retry_after = max(1, int(oldest + RATE_LIMIT_WINDOW_SECONDS - now))
+                return False, retry_after
+            db.execute(
+                "INSERT INTO score_attempts (ip_hash, created_at) VALUES (?, ?)",
+                (ip_hash, now),
+            )
+            return True, 0
+    except sqlite3.Error as exc:
+        app.logger.exception("rate-limit storage failed: %s", exc)
+        raise RateLimitStoreUnavailable from exc
 
 
 # --------------------------------------------------------------------------- #
@@ -147,6 +252,7 @@ def _client():
 
 
 def _complete(client, system: str, user: str, *, max_tokens: int, temperature: float) -> str:
+    g.score_model_calls = getattr(g, "score_model_calls", 0) + 1
     reply = client.chat.completions.create(
         model=MODEL,
         max_tokens=max_tokens,
@@ -155,12 +261,17 @@ def _complete(client, system: str, user: str, *, max_tokens: int, temperature: f
             {"role": "system", "content": system},
             {"role": "user", "content": user},
         ],
+        timeout=LLM_TIMEOUT_SECONDS,
     )
+    usage = reply.usage
+    if usage:
+        g.score_prompt_tokens = getattr(g, "score_prompt_tokens", 0) + (usage.prompt_tokens or 0)
+        g.score_completion_tokens = getattr(g, "score_completion_tokens", 0) + (usage.completion_tokens or 0)
     return (reply.choices[0].message.content or "").strip()
 
 
 def _rate_one(client, item, answer):
-    """Score a single response with the model, falling back to mock on error."""
+    """Score a single response; live-scoring failures never receive mock scores."""
     if client is None:
         return _mock_scores(item, answer)
     if not answer.strip():
@@ -186,15 +297,17 @@ def _rate_one(client, item, answer):
         data = _extract_json(text)
         return {"score": _clamp(data.get("score", 0), -5, 5),
                 "note": str(data.get("note", "")).strip()}
-    except Exception as exc:  # network, parsing, auth — degrade gracefully
-        app.logger.warning("rating failed, using mock: %s", exc)
-        return _mock_scores(item, answer)
+    except Exception as exc:  # network, parsing, auth
+        app.logger.exception("live rating failed: %s", exc)
+        raise ScoringUnavailable from exc
 
 
 def _style_summary(client, graded):
     if client is None:
         return ("Demo mode: connect a DEEPSEEK_API_KEY to receive a personalized "
                 "read on your comedic style.")
+    if not any(g["answer"] for g in graded):
+        return "No written responses were submitted, so there is no comedic style to summarize yet."
     lines = []
     for g in graded:
         lines.append(
@@ -210,9 +323,8 @@ def _style_summary(client, graded):
             temperature=0.7,
         )
     except Exception as exc:
-        app.logger.warning("style summary failed: %s", exc)
-        return ("You showed a clear comedic instinct across these prompts — lean into "
-                "the angles that surprised you most.")
+        app.logger.exception("live style summary failed: %s", exc)
+        raise ScoringUnavailable from exc
 
 
 def band_for(score):
@@ -228,6 +340,11 @@ def band_for(score):
 @app.route("/")
 def index():
     return render_template("index.html")
+
+
+@app.errorhandler(RequestEntityTooLarge)
+def request_too_large(_error):
+    return jsonify({"error": "Your submission is too large. Please keep each response under 280 characters."}), 413
 
 
 @app.route("/api/prompts")
@@ -246,41 +363,80 @@ def api_prompts():
 
 @app.route("/api/score", methods=["POST"])
 def api_score():
+    started_at = time.monotonic()
+    g.score_model_calls = 0
+    g.score_prompt_tokens = 0
+    g.score_completion_tokens = 0
     payload = request.get_json(silent=True) or {}
     responses = payload.get("responses", [])
-    if not isinstance(responses, list) or not responses:
-        return jsonify({"error": "Send a non-empty 'responses' list."}), 400
+    if not isinstance(responses, list) or len(responses) != len(ITEMS_BY_ID):
+        return jsonify({"error": "Submit exactly one response for each test item."}), 400
 
-    client = _client() if API_KEY else None
+    answers_by_id = {}
+    for response in responses:
+        if not isinstance(response, dict):
+            return jsonify({"error": "Each response must be an object."}), 400
+        item_id = response.get("id")
+        text = response.get("text", "")
+        if item_id not in ITEMS_BY_ID or item_id in answers_by_id:
+            return jsonify({"error": "Responses must contain each test item exactly once."}), 400
+        if not isinstance(text, str):
+            return jsonify({"error": "Each response must be text."}), 400
+        answer = text.strip()
+        if len(answer) > MAX_ANSWER_LENGTH:
+            return jsonify({"error": f"Each response must be at most {MAX_ANSWER_LENGTH} characters."}), 400
+        answers_by_id[item_id] = answer
+
+    if set(answers_by_id) != set(ITEMS_BY_ID):
+        return jsonify({"error": "Responses must contain each test item exactly once."}), 400
+
+    ip_hash = _hash_ip(request.remote_addr or "unknown")
+    try:
+        allowed, retry_after = _consume_score_attempt(ip_hash)
+    except RateLimitStoreUnavailable:
+        return jsonify({"error": "Scoring is temporarily unavailable. Please try again shortly."}), 503
+    if not allowed:
+        _record_score_event("rate_limited", ip_hash, started_at)
+        response = jsonify({"error": "You have reached the test limit. Please try again in about an hour."})
+        response.status_code = 429
+        response.headers["Retry-After"] = str(retry_after)
+        return response
+
+    try:
+        client = _client() if API_KEY else None
+    except Exception as exc:
+        app.logger.exception("scoring client could not be created: %s", exc)
+        _record_score_event("client_unavailable", ip_hash, started_at)
+        return jsonify({"error": "Scoring is temporarily unavailable. Please try again shortly."}), 503
 
     graded = []
-    for r in responses:
-        item = ITEMS_BY_ID.get(r.get("id"))
-        if not item:
-            continue
-        answer = (r.get("text") or "").strip()
-        scores = _rate_one(client, item, answer)
-        relative_score = scores["score"]
-        graded.append({
-            "id": item["id"],
-            "setup": item["setup"],
-            "answer": answer,
-            "relative_score": relative_score,
-            "note": scores["note"],
-        })
-
-    if not graded:
-        return jsonify({"error": "No recognized prompt ids in submission."}), 400
+    try:
+        for item in PROMPTS["items"]:
+            answer = answers_by_id[item["id"]]
+            scores = _rate_one(client, item, answer)
+            relative_score = scores["score"]
+            graded.append({
+                "id": item["id"],
+                "setup": item["setup"],
+                "answer": answer,
+                "relative_score": relative_score,
+                "note": scores["note"],
+            })
+        style = _style_summary(client, graded)
+    except ScoringUnavailable:
+        _record_score_event("provider_error", ip_hash, started_at)
+        return jsonify({"error": "We could not score your responses just now. Please try again shortly."}), 503
 
     mean_relative_score = sum(g["relative_score"] for g in graded) / len(graded)
     overall = round(max(0, min(200, 100 + 20 * mean_relative_score)))
     label, blurb = band_for(overall)
+    _record_score_event("completed", ip_hash, started_at)
 
     return jsonify({
         "overall": overall,
         "band": label,
         "band_blurb": blurb,
-        "style": _style_summary(client, graded),
+        "style": style,
         # Participant-facing responses intentionally do not expose the internal
         # per-item ratings or aggregate used to calculate the result.
         "breakdown": [

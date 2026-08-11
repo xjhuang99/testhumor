@@ -11,9 +11,8 @@
 </head>
 <body>
   <header class="site-header">
-    <a class="brand" href="/" aria-label="ACTRLabs home">
+    <a class="brand" href="https://actrlab.com/" aria-label="Visit ACTRLabs">
       <strong>ACTR<span>Labs</span></strong>
-      <small>Redefining Learning</small>
     </a>
     <p class="header-label">Humor Intelligence Test</p>
   </header>
@@ -67,6 +66,9 @@
             <button class="btn btn--primary" id="next-btn">Next</button>
           </div>
         </div>
+        <p class="timeout-message" id="timeout-message" hidden>
+          Time is up. Your response has been saved; click “See my score” when you are ready.
+        </p>
       </article>
     </section>
 
@@ -74,6 +76,10 @@
     <section class="screen screen--scoring" id="screen-scoring" hidden>
       <div class="loading-mark" aria-hidden="true"><i></i><i></i><i></i></div>
       <p class="scoring-text" id="scoring-text">Reading the room…</p>
+      <div class="scoring-actions" id="scoring-actions" hidden>
+        <button class="btn btn--primary" id="retry-btn">Try again</button>
+        <button class="btn btn--ghost" id="restart-from-error-btn">Start over</button>
+      </div>
     </section>
 
     <!-- =========================== RESULTS =========================== -->
