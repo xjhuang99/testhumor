@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Humor Intelligence Test · ACTR</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,700;12..96,800&family=Inter:wght@400;500;600&family=Space+Mono:wght@400;700&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="/static/styles.css" />
+</head>
+<body>
+  <main class="stage" id="stage">
+
+    <!-- ============================ INTRO ============================ -->
+    <section class="screen screen--intro is-active" id="screen-intro">
+      <div class="marquee" aria-hidden="true">
+        <span></span><span></span><span></span><span></span><span></span>
+        <span></span><span></span><span></span><span></span><span></span>
+      </div>
+      <p class="eyebrow">The Humor Intelligence Test · powered by <strong>ACTR</strong></p>
+      <h1 class="hero">How funny<br />are you, <em>really?</em></h1>
+      <p class="lede">
+        Eight timed prompts. Write the funniest thing you can.
+        An AI judge estimates every answer and combines them into your Humor
+        Intelligence score.
+      </p>
+      <label class="name-field" for="name-input">Please enter your name <span>(optional)</span></label>
+      <input class="name-input" id="name-input" type="text" maxlength="100" autocomplete="name" />
+      <button class="btn btn--primary" id="start-btn">Start the test</button>
+      <p class="fineprint">About five minutes · No sign-in · Nothing saved</p>
+    </section>
+
+    <!-- ============================ TEST ============================ -->
+    <section class="screen screen--test" id="screen-test" hidden>
+      <header class="test-head">
+        <div class="progress">
+          <span class="progress__label" id="progress-label">Prompt 1 of 8</span>
+          <span class="timer" id="timer" aria-live="polite">0:30</span>
+          <div class="progress__track"><div class="progress__fill" id="progress-fill"></div></div>
+        </div>
+      </header>
+
+      <article class="card" id="prompt-card">
+        <p class="card__kicker" id="prompt-kicker">Caption this</p>
+        <div class="card__image" id="prompt-image" hidden></div>
+        <h2 class="card__setup" id="prompt-setup">…</h2>
+        <textarea
+          class="answer"
+          id="answer-input"
+          rows="3"
+          maxlength="280"
+          placeholder="Type your funniest answer…"
+          autocomplete="off"></textarea>
+        <div class="card__foot">
+          <span class="counter" id="counter">0 / 280</span>
+          <div class="card__actions">
+            <button class="btn btn--ghost" id="skip-btn">Skip</button>
+            <button class="btn btn--primary" id="next-btn">Next</button>
+          </div>
+        </div>
+      </article>
+    </section>
+
+    <!-- =========================== SCORING =========================== -->
+    <section class="screen screen--scoring" id="screen-scoring" hidden>
+      <div class="meter meter--idle" id="scoring-meter">
+        <svg viewBox="0 0 240 140" class="gauge" aria-hidden="true">
+          <path d="M20 130 A100 100 0 0 1 220 130" fill="none" stroke="var(--hairline)" stroke-width="14" stroke-linecap="round"/>
+          <path d="M20 130 A100 100 0 0 1 220 130" fill="none" stroke="url(#warm)" stroke-width="14" stroke-linecap="round" class="gauge__sweep"/>
+          <defs>
+            <linearGradient id="warm" x1="0" x2="1">
+              <stop offset="0" stop-color="var(--teal)"/>
+              <stop offset="0.6" stop-color="var(--marquee)"/>
+              <stop offset="1" stop-color="var(--punch)"/>
+            </linearGradient>
+          </defs>
+        </svg>
+      </div>
+      <p class="scoring-text" id="scoring-text">Reading the room…</p>
+    </section>
+
+    <!-- =========================== RESULTS =========================== -->
+    <section class="screen screen--results" id="screen-results" hidden>
+      <p class="eyebrow">Your Humor Intelligence</p>
+
+      <div class="meter" id="result-meter">
+        <svg viewBox="0 0 240 150" class="gauge">
+          <path d="M20 130 A100 100 0 0 1 220 130" fill="none" stroke="var(--hairline)" stroke-width="14" stroke-linecap="round"/>
+          <path id="result-arc" d="M20 130 A100 100 0 0 1 220 130" fill="none" stroke="url(#warm2)" stroke-width="14" stroke-linecap="round" pathLength="100" stroke-dasharray="0 100"/>
+          <line id="needle" x1="120" y1="130" x2="120" y2="46" stroke="var(--ink)" stroke-width="4" stroke-linecap="round" transform="rotate(-90 120 130)"/>
+          <circle cx="120" cy="130" r="8" fill="var(--ink)"/>
+          <defs>
+            <linearGradient id="warm2" x1="0" x2="1">
+              <stop offset="0" stop-color="var(--teal)"/>
+              <stop offset="0.6" stop-color="var(--marquee)"/>
+              <stop offset="1" stop-color="var(--punch)"/>
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="meter__readout">
+          <span class="meter__score" id="result-score">0</span>
+          <span class="meter__outof">/ 200</span>
+        </div>
+      </div>
+
+      <h2 class="band" id="result-band">—</h2>
+      <p class="band-blurb" id="result-blurb"></p>
+
+      <p class="score-method" id="score-method"></p>
+
+      <div class="style-note">
+        <p class="style-note__label">Your comedic style</p>
+        <p id="result-style"></p>
+      </div>
+
+      <details class="breakdown" id="result-breakdown">
+        <summary>See every answer, scored</summary>
+        <div class="breakdown__list" id="breakdown-list"></div>
+      </details>
+
+      <div class="results-actions">
+        <button class="btn btn--primary" id="retake-btn">Take it again</button>
+        <button class="btn btn--ghost" id="copy-btn">Copy my result</button>
+      </div>
+      <p class="mode-flag" id="mode-flag" hidden></p>
+    </section>
+
+  </main>
+
+  <footer class="site-foot">
+    <span>Humor Intelligence Test</span>
+    <span class="dot">·</span>
+    <span>powered by ACTR</span>
+  </footer>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>

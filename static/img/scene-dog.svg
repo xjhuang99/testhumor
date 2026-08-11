@@ -1,0 +1,5 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 360" role="img">
+  <rect width="640" height="360" fill="#EDEFF4"/>
+  <rect x="80" y="40" width="480" height="280" rx="12" fill="#FBFBFE" stroke="#DADDE7"/>
+  <text x="320" y="190" text-anchor="middle" font-family="system-ui,sans-serif" font-size="18" fill="#63657D">Dog at desk · tiny tie</text>
+</svg>
