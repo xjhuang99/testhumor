@@ -24,11 +24,11 @@
       <p class="eyebrow">ACTRLabs assessment</p>
       <h1 class="hero">How funny<br />are you, <em>really?</em></h1>
       <p class="lede">
-        Eight short writing prompts. Bring your sharpest comic instinct; receive
-        a personal Humor Intelligence result when you finish.
+        Three timed challenges. Each pairs a slide, a headline, and a prompt;
+        receive a personal Humor Intelligence result when you finish.
       </p>
       <div class="intro-meta" aria-label="Test details">
-        <span>8 prompts</span><span>About 5 minutes</span><span>No sign-in</span>
+        <span>3 challenges</span><span>About 3 minutes</span><span>No sign-in</span>
       </div>
       <label class="name-field" for="name-input">Please enter your name <span>(optional)</span></label>
       <input class="name-input" id="name-input" type="text" maxlength="100" autocomplete="name" />
@@ -41,8 +41,8 @@
       <header class="test-head">
         <div class="progress">
           <div class="progress__topline">
-            <span class="progress__label" id="progress-label">Prompt 1 of 8</span>
-            <span class="timer" id="timer" aria-live="polite">0:30</span>
+            <span class="progress__label" id="progress-label">Prompt 1 of 3</span>
+            <span class="timer" id="timer" aria-live="polite">1:00</span>
           </div>
           <div class="progress__track"><div class="progress__fill" id="progress-fill"></div></div>
         </div>
@@ -51,6 +51,7 @@
       <article class="card" id="prompt-card">
         <p class="card__kicker" id="prompt-kicker">Caption this</p>
         <div class="card__image" id="prompt-image" hidden></div>
+        <p class="card__headline" id="prompt-headline" hidden></p>
         <h2 class="card__setup" id="prompt-setup">…</h2>
         <textarea
           class="answer"
