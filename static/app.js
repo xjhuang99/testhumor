@@ -60,7 +60,7 @@ async function loadPrompts() {
 /* --------------------------- render a prompt --------------------------- */
 function renderPrompt() {
   const item = items[cursor];
-  $("progress-label").textContent = `Prompt ${cursor + 1} of ${items.length}`;
+  $("progress-label").textContent = `Question ${cursor + 1} of ${items.length}`;
   $("progress-fill").style.width = `${(cursor / items.length) * 100}%`;
 
   const kicker = $("prompt-kicker");
