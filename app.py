@@ -208,7 +208,7 @@ RATER_SYSTEM = """You are the single, consistent rater for a Humor Intelligence 
 Score one written response to the supplied comedic prompt. Make an informed estimate
 of how funny it is relative to a broad adult English-speaking respondent pool.
 
-Return one INTEGER relative score from -5 to +5. It will be averaged across all eight
+Return one INTEGER relative score from -5 to +5. It will be averaged across all supplied
 items and transformed to a 0–200 result as 100 + 20 × average.
 Use the full scale, but reserve extremes for clear cases:
 -5 = blank, nonsense, off-prompt, or no humorous attempt
@@ -327,7 +327,9 @@ def _rate_one(client, item, answer):
         return {"score": -5, "note": "No answer here — an empty page never gets a laugh."}
 
     user_msg = (
-        f"PROMPT ({item['type']}): {item['setup']}\n\n"
+        f"STIMULUS ({item['type']}):\n"
+        f"HEADLINE: {item.get('headline', '')}\n"
+        f"PROMPT: {item['setup']}\n\n"
         f"RESPONSE:\n\"\"\"\n{answer.strip()}\n\"\"\""
     )
     if item.get("image_alt"):
