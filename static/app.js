@@ -63,7 +63,9 @@ function renderPrompt() {
   $("progress-label").textContent = `Prompt ${cursor + 1} of ${items.length}`;
   $("progress-fill").style.width = `${(cursor / items.length) * 100}%`;
 
-  $("prompt-kicker").textContent = item.kicker || "Prompt";
+  const kicker = $("prompt-kicker");
+  kicker.hidden = !item.kicker;
+  kicker.textContent = item.kicker || "";
   $("prompt-setup").textContent = item.setup;
 
   const headline = $("prompt-headline");
