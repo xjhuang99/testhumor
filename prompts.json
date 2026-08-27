@@ -9,11 +9,11 @@
     {"id":"slide_1","type":"slide","kicker":"","setup":"Write a short joke that could fit this slide.","image":"/static/img/slide-organizational-structure.png","image_alt":"Training slide titled Our Organizational Structure showing a hierarchy from Chief Executive through VPs and Directors to Everyone Else, with the line: Clear reporting lines create accountability.","time_limit":60},
     {"id":"slide_2","type":"slide","kicker":"","setup":"Write a short joke that could fit this slide.","image":"/static/img/slide-work-life-balance.png","image_alt":"Training slide titled Work-Life Balance listing: Your wellbeing is our top priority; Disconnect fully after work hours; Please continue to monitor email for urgent items; Use your vacation days. You have earned them.","time_limit":60},
     {"id":"slide_3","type":"slide","kicker":"","setup":"Write a short joke that could fit this slide.","image":"/static/img/slide-constructive-feedback.png","image_alt":"Training slide titled Giving Constructive Feedback listing: Be specific, timely, and objective; Focus on the behavior, not the person; Use the feedback sandwich: praise, critique, praise; End with a clear action step.","time_limit":60},
-    {"id":"headline_1","type":"headline","kicker":"","setup":"Company announces fourth reorganization this year","time_limit":30},
-    {"id":"headline_2","type":"headline","kicker":"","setup":"CEO returns from leadership retreat with bold new vision","time_limit":30},
-    {"id":"headline_3","type":"headline","kicker":"","setup":"Firm replaces annual performance reviews with quarterly performance reviews","time_limit":30},
-    {"id":"prompt_1","type":"prompt","kicker":"","setup":"Things not to say on your first day at a new job","time_limit":30},
-    {"id":"prompt_2","type":"prompt","kicker":"","setup":"Worst names for a conference room","time_limit":30},
-    {"id":"prompt_3","type":"prompt","kicker":"","setup":"Rejected themes for the annual holiday party","time_limit":30}
+    {"id":"headline_1","type":"headline","kicker":"","headline":"Company announces fourth reorganization this year","setup":"Write a short joke that could fit this headline.","time_limit":30},
+    {"id":"headline_2","type":"headline","kicker":"","headline":"CEO returns from leadership retreat with bold new vision","setup":"Write a short joke that could fit this headline.","time_limit":30},
+    {"id":"headline_3","type":"headline","kicker":"","headline":"Firm replaces annual performance reviews with quarterly performance reviews","setup":"Write a short joke that could fit this headline.","time_limit":30},
+    {"id":"prompt_1","type":"prompt","kicker":"","headline":"Things not to say on your first day at a new job","setup":"Write a short joke that could fit this prompt.","time_limit":30},
+    {"id":"prompt_2","type":"prompt","kicker":"","headline":"Worst names for a conference room","setup":"Write a short joke that could fit this prompt.","time_limit":30},
+    {"id":"prompt_3","type":"prompt","kicker":"","headline":"Rejected themes for the annual holiday party","setup":"Write a short joke that could fit this prompt.","time_limit":30}
   ]
 }
