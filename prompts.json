@@ -9,7 +9,7 @@
     {
       "id": "workplace_1",
       "type": "composite",
-      "kicker": "Slide + headline + prompt",
+      "kicker": "",
       "headline": "Company announces fourth reorganization this year",
       "setup": "Things not to say on your first day at a new job",
       "image": "/static/img/slide-organizational-structure.png",
@@ -19,7 +19,7 @@
     {
       "id": "workplace_2",
       "type": "composite",
-      "kicker": "Slide + headline + prompt",
+      "kicker": "",
       "headline": "CEO returns from leadership retreat with bold new vision",
       "setup": "Worst names for a conference room",
       "image": "/static/img/slide-work-life-balance.png",
@@ -29,7 +29,7 @@
     {
       "id": "workplace_3",
       "type": "composite",
-      "kicker": "Slide + headline + prompt",
+      "kicker": "",
       "headline": "Firm replaces annual performance reviews with quarterly performance reviews",
       "setup": "Rejected themes for the annual holiday party",
       "image": "/static/img/slide-constructive-feedback.png",
