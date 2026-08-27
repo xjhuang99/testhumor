@@ -73,6 +73,7 @@ button, input, textarea { font: inherit; }
 .card__kicker { display: inline-block; margin: 0 0 18px; padding: 6px 10px; border-radius: 7px; color: var(--accent-dark); background: var(--accent-soft); font-size: .73rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
 .card__image { margin-bottom: 24px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; line-height: 0; }
 .card__image img { width: 100%; height: auto; display: block; }
+.card__headline { margin: 0 0 12px; color: var(--accent-dark); font-size: .8rem; font-weight: 700; letter-spacing: .035em; line-height: 1.45; text-transform: uppercase; }
 .card__setup { margin: 0 0 22px; font-size: clamp(1.4rem, 4vw, 2rem); line-height: 1.2; letter-spacing: -.035em; }
 .answer { width: 100%; min-height: 120px; padding: 15px; resize: vertical; color: var(--ink); border: 1px solid var(--line); border-radius: 10px; background: #fbfcfe; outline: none; line-height: 1.5; transition: border .15s ease, box-shadow .15s ease; }
 .answer::placeholder { color: #9aa4b3; }

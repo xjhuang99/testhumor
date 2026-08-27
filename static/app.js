@@ -66,6 +66,15 @@ function renderPrompt() {
   $("prompt-kicker").textContent = item.kicker || "Prompt";
   $("prompt-setup").textContent = item.setup;
 
+  const headline = $("prompt-headline");
+  if (item.headline) {
+    headline.hidden = false;
+    headline.textContent = item.headline;
+  } else {
+    headline.hidden = true;
+    headline.textContent = "";
+  }
+
   const imgWrap = $("prompt-image");
   if (item.image) {
     imgWrap.hidden = false;
@@ -253,7 +262,7 @@ async function copyResult() {
   if (!lastResult) return;
   const text =
     `My Humor Intelligence: ${lastResult.overall}/200 — "${lastResult.band}".\n` +
-    `AI-estimated from eight timed prompts.\n` +
+    `AI-estimated from three timed challenges.\n` +
     `Test yourself: the Humor Intelligence Test, powered by ACTR.`;
   try {
     await navigator.clipboard.writeText(text);
