@@ -71,6 +71,7 @@ button, input, textarea { font: inherit; }
 
 .card { padding: clamp(24px, 5vw, 38px); background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius); box-shadow: var(--shadow); }
 .card__kicker { display: inline-block; margin: 0 0 18px; padding: 6px 10px; border-radius: 7px; color: var(--accent-dark); background: var(--accent-soft); font-size: .73rem; font-weight: 700; letter-spacing: .05em; text-transform: uppercase; }
+.card__kicker[hidden] { display: none; }
 .card__image { margin-bottom: 24px; overflow: hidden; border: 1px solid var(--line); border-radius: 10px; line-height: 0; }
 .card__image img { width: 100%; height: auto; display: block; }
 .card__headline { margin: 0 0 12px; color: var(--accent-dark); font-size: .8rem; font-weight: 700; letter-spacing: .035em; line-height: 1.45; text-transform: uppercase; }
